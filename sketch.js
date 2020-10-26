@@ -58,6 +58,7 @@ function setup() {
 }
 
 function draw() {
+  background(255);
   if(bg!==undefined){
   background(bg);  
   }
