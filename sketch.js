@@ -1,160 +1,133 @@
-const Engine = Matter.Engine;
-const World= Matter.World;
-const Bodies = Matter.Bodies;
-const Constraint = Matter.Constraint;
-
-var engine,world;
-var polygon,slingshot;
-var gameState="onSling";
-var score=0;
-var bg;
+//Create variables here
+var dog,dogimg,dogimg2,database,foodstock,bedroom,garden,livingroom,washroom,food,foodobj; 
+var feed,addFood,fedTime;
+var gameState,readState,currentTime;
+function preload()
+{
+  //load images here
+  dogimg=loadImage("images/Dog.png");
+  dogimg2=loadImage("images/happy dog.png");
+  bedroom=loadImage("images/Bed Room.png");
+  garden=loadImage("images/Garden.png");
+  livingroom=loadImage("images/Living Room.png");
+  washroom=loadImage("images/Wash Room.png");
+}
 
 function setup() {
-  createCanvas(800,400);
-  //createSprite(400, 200, 50, 50);
-  engine=Engine.create();
-  world=engine.world;
-  getBackgroundImg();
-  ground=new Ground(320,390,100,10);
-  ground2=new Ground(510,290,100,10);
-  ground3=new Ground(700,190,100,10);
-  
-  block1=new Box(290,365,20,40);
-  block2=new Box(310,365,20,40);
-  block3=new Box(330,365,20,40);
-  block4=new Box(350,365,20,40);
+  createCanvas(700, 700);
+  imageMode(CENTER);
+  database=firebase.database();
+  dog=createSprite(600,350);
+  dog.addImage(dogimg);
+  dog.scale=0.2;
+  foodobj=new Food();
 
-  block5=new Box(310,325,20,40);
-  block6=new Box(330,325,20,40);
+  feed=createButton('FEED');
+  feed.position(650,100);
+  feed.mousePressed(feedDog);
 
-  block7=new Box(320,285,20,40);
+  addfood=createButton('ADD FOOD');
+  addfood.position(750,100);
+  addfood.mousePressed(addFood);
 
+  foodstock=database.ref('food');
+  foodstock.on("value",function(data){
+    food=data.val();
+    foodobj.updatefood(food);
+  },showErr);
 
-  block8=new Box(480,265,20,40);
-  block9=new Box(500,265,20,40);
-  block10=new Box(520,265,20,40);
-  block11=new Box(540,265,20,40);
-
-  block12=new Box(500,225,20,40);
-  block13=new Box(520,225,20,40);
-
-  block14=new Box(510,185,20,40);
-
-
-  block15=new Box(670,165,20,40);
-  block16=new Box(690,165,20,40);
-  block17=new Box(710,165,20,40);
-  block18=new Box(730,165,20,40);
-
-  block19=new Box(690,125,20,40);
-  block20=new Box(710,125,20,40);
-
-  block21=new Box(700,85,20,40);
-
-  polygon=Bodies.circle(100,300,15,{density:1.0});
-  World.add(world,polygon);
-
-  slingshot=new SlingShot(polygon,{x:100,y:300});
+  readState=database.ref('gameState');
+  readState.on("value",function(data){
+    gameState=data.val();
+  });
 }
 
-function draw() {
-  background(255);
-  if(bg!==undefined){
-  background(bg);  
-  }
-  Engine.update(engine);
-  ground.display();
-  ground2.display();
-  ground3.display();
 
-  fill(255);
-  block1.display();
-  block2.display();
-  block3.display();
-  block4.display();
-  block5.display();
-  block6.display();
-  block7.display();
-
-  fill(155);
-  block8.display();
-  block9.display();
-  block10.display();
-  block11.display();
-  block12.display();
-  block13.display();
-  block14.display();
-
-  fill(55);
-  block15.display();
-  block16.display();
-  block17.display();
-  block18.display();
-  block19.display();
-  block20.display();
-  block21.display();
-  slingshot.display();
-
-  block1.score();
-  block2.score();
-  block3.score();
-  block4.score();
-  block5.score();
-  block6.score();
-  block7.score();
-  block8.score();
-  block9.score();
-  block10.score();
-  block11.score();
-  block12.score();
-  block13.score();
-  block14.score();
-  block15.score();
-  block16.score();
-  block17.score();
-  block18.score();
-  block19.score();
-  block20.score();
-  block21.score();
-
+function draw() {  
+  background("yellow");
+  fill("white");
   textSize(20);
-  text("Score:"+score,700,350);
-  fill("red");
-  ellipseMode(RADIUS);
-  ellipse(polygon.position.x,polygon.position.y,15,15);
-  drawSprites();
-}
-
-function mouseDragged(){
-  if (gameState!=="launched"){
-      Matter.Body.setPosition(polygon, {x: mouseX , y: mouseY});
-  }
-}
-
-function mouseReleased(){
-  slingshot.fly();
-  gameState = "launched";
-}
-
-function keyPressed(){
-  if(keyCode === 32){
-     slingshot.attach(polygon);
-     Matter.Body.setPosition(polygon,{x:100,y:300});
-     gameState="onSling";
-  }
-}
-
-async function getBackgroundImg(){
-  var response = await fetch("http://worldtimeapi.org/api/timezone/Asia/Kolkata");
-  var responseJSON = await response.json();
-
-  var datetime = responseJSON.datetime;
-  var hour = datetime.slice(11,13);
+  text("Food Remaining:"+food,280,150);
+  text("PRESS THE BUTTON TO FEED BRUNO",200,20);
   
-  if(hour>=06 && hour<=19){
-      bg = 255;
+  foodobj.display();
+
+  fedTime = database.ref('feedTime');
+  fedTime.on("value",function(data){
+    foodobj.lastfed = data.val();
+  })
+
+  currentTime = hour();
+  if(currentTime===(foodobj.lastfed+1)){
+    console.log("garden");
+    update("Playing");
+    foodobj.garden();
+  }
+  else if(currentTime===(foodobj.lastfed+2)){
+    update("Bathing");
+    foodobj.washroom();
+  }
+  else if(currentTime===(foodobj.lastfed+3)){
+    update("livingroom");
+    foodobj.livingroom();
+  }
+  else if(currentTime===(foodobj.lastfed+4)){
+    update("sleeping");
+    foodobj.bedroom();
   }
   else{
-      bg = 0;
+    update("hungry");
+    dog.addImage(dogimg);
   }
+
+  if(foodobj.lastfed>=12)
+    text("Last feed time : "+ foodobj.lastfed%12 + " PM",300,650);
+  else if(foodobj.lastfed == 0)
+    text("Last feed time : 12 AM");
+  else
+    text("Last feed time : "+ foodobj.lastfed + " AM",300,650);
+  
+  if(gameState!=="hungry"){
+    feed.hide();
+    addfood.hide();
+    dog.visible=false;
+  }
+  else{
+    feed.show();
+    addfood.show();
+    dog.visible=true;
+  }
+
+  drawSprites();
+  
+  
+}
+
+function feedDog(){
+  
+  dog.addImage(dogimg2);
+
+  foodobj.updatefood(foodobj.foodstock-1);
+  database.ref('/').update({
+    food:foodobj.foodstock,
+    feedTime : hour()
+  });
+
+}
+
+function update(state){
+  database.ref('/').update({
+    gameState : state
+  });
+}
+
+function addFood(){
+  foodobj.updatefood(foodobj.foodstock+1);
+  database.ref('/').update({
+    food:foodobj.foodstock
+  })
+}
+
+function showErr(){
+  console.log("error");
 }
